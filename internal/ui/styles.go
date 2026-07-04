@@ -3,7 +3,7 @@ package ui
 import "charm.land/lipgloss/v2"
 
 var (
-	bgColor     = lipgloss.Color("#0a0810")
+	bgColor     = lipgloss.Color("#292928")
 	purpleColor = lipgloss.Color("#a78bfa")
 	accentColor = lipgloss.Color("#b9a7e6")
 	textColor   = lipgloss.Color("#e9e4f5")
@@ -16,9 +16,17 @@ var (
 
 	activeStyle = lipgloss.NewStyle().
 			Foreground(purpleColor).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderLeft(true).
+			PaddingLeft(1).
+			BorderLeftForeground(purpleColor).
 			Bold(true)
 
 	inactiveStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderLeft(true).
+			BorderLeftForeground(bgColor).
+			PaddingLeft(1).
 			Foreground(mutedColor)
 
 	logoStyle = lipgloss.NewStyle().

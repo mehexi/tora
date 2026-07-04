@@ -21,6 +21,14 @@ const (
 	modeAnime
 )
 
+type ActiveWindowState int
+
+const (
+	sideBar ActiveWindowState = iota
+	mainContent
+	searchBar
+)
+
 func (s SearchMode) String() string {
 	switch s {
 	case modeAll:
@@ -63,8 +71,13 @@ func (s SearchMode) Prev() SearchMode {
 }
 
 type Model struct {
-	appLayout LayoutState
-	appState  AppState
+	appLayout  LayoutState
+	appState   AppState
+	normalMode NormalState
+}
+
+type NormalState struct {
+	ActiveWindow ActiveWindowState
 }
 
 type LayoutState struct {
