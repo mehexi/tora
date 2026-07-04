@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/table"
 	"charm.land/lipgloss/v2"
 )
 
@@ -32,6 +33,10 @@ func renderSearchBar(m Model, width int) string {
 		BorderForeground(mutedColor).
 		Width(width)
 
+	if m.normalMode.ActiveWindow == searchBar {
+		inputStyle = inputStyle.BorderForeground(purpleColor)
+	}
+
 	searchBox := strings.TrimRight(m.appState.inputText.View(), "\n")
 	searchInput := inputStyle.Render(searchBox)
 
@@ -50,12 +55,23 @@ func renderBody(m Model) string {
 
 	w2, h2 := RemainingVertical(w, h, searchBar)
 
-	searchItems := lipgloss.NewStyle().
+	const borderOverhead = 3
+	tableWidth := w2 - borderOverhead
+	tableHeight := h2 - borderOverhead
+
+	torrentList := renderTorrentlist(m, tableWidth, tableHeight)
+
+	searchItemsStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(mutedColor).
 		Width(w2).
-		Height(h2).
-		Render("text")
+		Height(h2)
+
+	if m.normalMode.ActiveWindow == mainContent {
+		searchItemsStyle = searchItemsStyle.BorderForeground(purpleColor)
+	}
+
+	searchItems := searchItemsStyle.Render(torrentList)
 
 	mainContent := lipgloss.JoinVertical(lipgloss.Left, searchBar, searchItems)
 	main := lipgloss.JoinHorizontal(lipgloss.Left, sideBar, mainContent)
@@ -64,27 +80,59 @@ func renderBody(m Model) string {
 }
 
 func renderSideBar(m Model) string {
-
 	var modes []string
-
 	for _, s := range []SearchMode{modeAll, modeGames, modeMovies, modeAnime} {
 		if s == m.appState.mode {
-			modes = append(modes, activeStyle.Render(s.String()))
+			if m.normalMode.ActiveWindow == sideBar {
+				modes = append(modes, activeStyle.Render(s.String()))
+			} else {
+				modes = append(modes, mutedActive.Render(s.String()))
+			}
 		} else {
 			modes = append(modes, inactiveStyle.Render(s.String()))
 		}
 	}
 
-	if m.normalMode.ActiveWindow == sideBar {
-		return lipgloss.NewStyle().Width(m.appLayout.width / 9).Render(strings.Join(modes, "\n"))
-	}
-
-	return lipgloss.NewStyle().Width(m.appLayout.width / 9).Render(strings.Join(modes, "\n"))
+	return lipgloss.NewStyle().
+		Width(m.appLayout.width / 9).
+		Render(strings.Join(modes, "\n"))
 
 }
 
 func renderedFotter(m Model) string {
-	return lipgloss.JoinVertical(lipgloss.Center, "mode")
+	var indicator string
+	var help string
+	switch m.normalMode.ActiveWindow {
+	case sideBar:
+		indicator = "SIDEBAR"
+		help = "  j/k navigate • / search • ? help"
+	case searchBar:
+		indicator = "SEARCH"
+		help = "  type query • enter search • esc back"
+	case mainContent:
+		indicator = "RESULTS"
+		help = "  j/k scroll • enter open • / search • ? help"
+	}
+
+	label := lipgloss.JoinHorizontal(lipgloss.Center,
+		footerIndicator.Render(indicator),
+		footerMuted.Render(help),
+	)
+
+	return lipgloss.NewStyle().
+		BorderTop(true).
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(mutedColor).
+		Width(m.appLayout.width).
+		Render(label)
+}
+
+func renderTorrentlist(m Model, w int, h int) string {
+	columns := buildColumns(w)
+	m.torrent.table.SetColumns(columns)
+	m.torrent.table.SetWidth(w)
+	m.torrent.table.SetHeight(h)
+	return m.torrent.table.View()
 }
 
 // RemainingVertical returns the leftover width/height after subtracting
@@ -111,4 +159,32 @@ func RemainingHorizontal(totalWidth, totalHeight int, elements ...string) (width
 		width = 0
 	}
 	return width, totalHeight
+}
+
+func buildColumns(totalWidth int) []table.Column {
+	const (
+		numW  = 4
+		sizeW = 10
+		seedW = 14
+		srcW  = 6
+
+		numColumns    = 5
+		paddingPerCol = 2 // typical: 1 space left + 1 space right, per column style
+	)
+
+	fixedTotal := numW + sizeW + seedW + srcW
+	overhead := numColumns * paddingPerCol
+
+	nameW := totalWidth - fixedTotal - overhead
+	if nameW < 10 {
+		nameW = 10
+	}
+
+	return []table.Column{
+		{Title: "#", Width: numW},
+		{Title: "Name", Width: nameW},
+		{Title: "Size", Width: sizeW},
+		{Title: "Seed:Lch", Width: seedW},
+		{Title: "Src", Width: srcW},
+	}
 }

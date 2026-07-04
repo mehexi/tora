@@ -23,11 +23,45 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		return m.onNormalKey(msg)
+	case tea.WindowSizeMsg:
+		return m.onWindowSize(msg)
+	}
+
+	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.onWindowSize(msg)
 	}
 
 	return m, nil
+}
+
+func (m Model) onNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch m.normalMode.ActiveWindow {
+	case sideBar:
+		switch msg.String() {
+		case "j", "down":
+			m.appState.mode = m.appState.mode.Next()
+		case "k", "up":
+			m.appState.mode = m.appState.mode.Prev()
+		}
+	case searchBar:
+		m.appState.inputText, _ = m.appState.inputText.Update(msg)
+	case mainContent:
+		m.torrent.table, cmd = m.torrent.table.Update(msg)
+	}
+
+	switch msg.String() {
+	case "tab":
+		m.normalMode.ActiveWindow = m.normalMode.ActiveWindow.Next()
+	case "/":
+		m.normalMode.ActiveWindow = searchBar
+	}
+
+	return m, cmd
 }
 
 func (m Model) onSplashKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

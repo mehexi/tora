@@ -36,4 +36,21 @@ var (
 	logoStyleBottom = lipgloss.NewStyle().
 			Foreground(accentColor).
 			Bold(true)
+
+	mutedActive = lipgloss.NewStyle().
+			Foreground(purpleColor).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderLeft(true).
+			PaddingLeft(1).
+			BorderLeftForeground(mutedColor).
+			Bold(true)
+
+	footerIndicator = lipgloss.NewStyle().
+			Background(purpleColor).
+			Foreground(bgColor).
+			Bold(true).
+			Padding(0, 1)
+
+	footerMuted = lipgloss.NewStyle().
+			Foreground(mutedColor)
 )
