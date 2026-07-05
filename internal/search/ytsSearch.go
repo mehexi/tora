@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	
-	"github.com/mehezi/tora/internal/ui"
 )
 
-func SearchYTS(query string) ([]ui.Torrent, error) {
-	apiURL := "https://yts.mx/api/v2/list_movies.json?limit=50"
+func fetchYTS(host, query string) ([]Torrent, error) {
+
+	apiURL := fmt.Sprintf("https://%s/api/v2/list_movies.json?limit=50", host)
+
 	if query != "" {
 		apiURL += "&query_term=" + url.QueryEscape(query)
 	}
 
 	resp, err := http.Get(apiURL)
+
 	if err != nil {
 		return nil, err
 	}
@@ -23,17 +24,7 @@ func SearchYTS(query string) ([]ui.Torrent, error) {
 
 	var result struct {
 		Data struct {
-			Movies []struct {
-				TitleLong string `json:"title_long"`
-				Torrents  []struct {
-					Hash      string `json:"hash"`
-					Quality   string `json:"quality"`
-					Type      string `json:"type"`
-					SizeBytes int64  `json:"size_bytes"`
-					Seeds     int    `json:"seeds"`
-					Peers     int    `json:"peers"`
-				} `json:"torrents"`
-			} `json:"movies"`
+			Movies []apiMovie `json:"movies"`
 		} `json:"data"`
 	}
 
@@ -41,13 +32,16 @@ func SearchYTS(query string) ([]ui.Torrent, error) {
 		return nil, err
 	}
 
-	var torrents []ui.Torrent
-	for _, movie := range result.Data.Movies {
+	return parseTorrents(result.Data.Movies), nil
+}
+
+func parseTorrents(movies []apiMovie) []Torrent {
+	var torrents []Torrent
+	for _, movie := range movies {
 		for _, t := range movie.Torrents {
 			name := fmt.Sprintf("%s [%s %s]", movie.TitleLong, t.Quality, t.Type)
 			magnet := fmt.Sprintf("magnet:?xt=urn:btih:%s&dn=%s", t.Hash, url.QueryEscape(name))
-			
-			// Convert size to string with GB/MB format
+
 			sizeGB := float64(t.SizeBytes) / (1024 * 1024 * 1024)
 			var sizeStr string
 			if sizeGB >= 1 {
@@ -57,7 +51,7 @@ func SearchYTS(query string) ([]ui.Torrent, error) {
 				sizeStr = fmt.Sprintf("%.2f MB", sizeMB)
 			}
 
-			torrents = append(torrents, ui.Torrent{
+			torrents = append(torrents, Torrent{
 				Name:     name,
 				Size:     sizeStr,
 				Seeders:  t.Seeds,
@@ -68,6 +62,19 @@ func SearchYTS(query string) ([]ui.Torrent, error) {
 			})
 		}
 	}
+	return torrents
+}
 
-	return torrents, nil
+func SearchYTS(query string) ([]Torrent, error) {
+	hosts := []string{"yts.mx", "yts.am", "yts.rs"}
+	var lastErr error
+	for _, host := range hosts {
+		torrents, err := fetchYTS(host, query)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		return torrents, nil
+	}
+	return nil, lastErr
 }

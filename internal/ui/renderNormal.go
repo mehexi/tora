@@ -80,22 +80,36 @@ func renderBody(m Model) string {
 }
 
 func renderSideBar(m Model) string {
-	var modes []string
+	var filterModes, actionModes []string
 	for _, s := range []SearchMode{modeAll, modeGames, modeMovies, modeAnime} {
 		if s == m.appState.mode {
 			if m.normalMode.ActiveWindow == sideBar {
-				modes = append(modes, activeStyle.Render(s.String()))
+				filterModes = append(filterModes, activeStyle.Render(s.String()))
 			} else {
-				modes = append(modes, mutedActive.Render(s.String()))
+				filterModes = append(filterModes, mutedActive.Render(s.String()))
 			}
 		} else {
-			modes = append(modes, inactiveStyle.Render(s.String()))
+			filterModes = append(filterModes, inactiveStyle.Render(s.String()))
+		}
+	}
+	for _, s := range []SearchMode{modeDownload, modeSeeding} {
+		if s == m.appState.mode {
+			if m.normalMode.ActiveWindow == sideBar {
+				actionModes = append(actionModes, activeStyle.Render(s.String()))
+			} else {
+				actionModes = append(actionModes, mutedActive.Render(s.String()))
+			}
+		} else {
+			actionModes = append(actionModes, inactiveStyle.Render(s.String()))
 		}
 	}
 
+	filterModes = append(filterModes, "")
+	allModes := append(filterModes, actionModes...)
+
 	return lipgloss.NewStyle().
 		Width(m.appLayout.width / 9).
-		Render(strings.Join(modes, "\n"))
+		Render(strings.Join(allModes, "\n"))
 
 }
 
@@ -128,6 +142,15 @@ func renderedFotter(m Model) string {
 }
 
 func renderTorrentlist(m Model, w int, h int) string {
+	if m.torrent.errMsg != "" {
+		return lipgloss.NewStyle().
+			Width(w).
+			Height(h).
+			Align(lipgloss.Center, lipgloss.Center).
+			Foreground(mutedColor).
+			Render(m.torrent.errMsg)
+	}
+
 	columns := buildColumns(w)
 	m.torrent.table.SetColumns(columns)
 	m.torrent.table.SetWidth(w)

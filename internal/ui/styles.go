@@ -3,7 +3,7 @@ package ui
 import "charm.land/lipgloss/v2"
 
 var (
-	bgColor     = lipgloss.Color("#292928")
+	bgColor     = lipgloss.Black
 	purpleColor = lipgloss.Color("#a78bfa")
 	accentColor = lipgloss.Color("#b9a7e6")
 	textColor   = lipgloss.Color("#e9e4f5")

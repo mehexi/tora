@@ -2,6 +2,7 @@ package ui
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/mehezi/tora/internal/search"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -10,26 +11,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
 		}
-	}
-
-	if m.appState.isSplashScreen {
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			return m.onSplashKey(msg)
-		case tea.WindowSizeMsg:
-			return m.onWindowSize(msg)
-		}
-		return m, nil
-	}
-
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
 		return m.onNormalKey(msg)
-	case tea.WindowSizeMsg:
-		return m.onWindowSize(msg)
-	}
-
-	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		return m.onWindowSize(msg)
 	}
@@ -49,7 +31,22 @@ func (m Model) onNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.appState.mode = m.appState.mode.Prev()
 		}
 	case searchBar:
-		m.appState.inputText, _ = m.appState.inputText.Update(msg)
+		if msg.String() == "esc" {
+			m.normalMode.ActiveWindow = mainContent
+		} else if msg.String() == "enter" {
+			q := m.appState.inputText.Value()
+			data, err := search.SearchYTS(q)
+			if err != nil {
+				m.torrent.errMsg = err.Error()
+			} else {
+				m.torrent.toreentList = data
+				m.torrent.table.SetRows(torrentsToRows(data))
+				m.torrent.errMsg = ""
+			}
+			m.normalMode.ActiveWindow = mainContent
+		} else {
+			m.appState.inputText, _ = m.appState.inputText.Update(msg)
+		}
 	case mainContent:
 		m.torrent.table, cmd = m.torrent.table.Update(msg)
 	}
@@ -62,20 +59,6 @@ func (m Model) onNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, cmd
-}
-
-func (m Model) onSplashKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "tab":
-		m.appState.mode = m.appState.mode.Next()
-	case "shift+tab":
-		m.appState.mode = m.appState.mode.Prev()
-	case "enter":
-		m.appState.isSplashScreen = false
-	default:
-		m.appState.inputText, _ = m.appState.inputText.Update(msg)
-	}
-	return m, nil
 }
 
 func (m Model) onWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
